@@ -1,0 +1,160 @@
+NOTEAPP:
+
+HelloApplicatio.java
+-----------------------------------------------------------------
+package com.example.noteapp2;
+
+import javafx.application.Application;
+import javafx.event.ActionEvent;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.ListView;
+import javafx.scene.control.SplitPane;
+import javafx.scene.control.TextArea;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.List;
+
+public class HelloApplication extends Application {
+    private ListView<String> noteList;
+    private TextArea noteContent;
+    private Controller controller;
+
+    @Override
+    public void start(Stage stage) throws Exception {
+        stage.setTitle("Note App");
+        controller = new Controller();
+        noteList = new ListView<>();
+        noteContent = new TextArea();
+
+        Button addBtn = new Button("Add");
+        Button deleteBtn = new Button("Delete");
+        Button saveBtn = new Button("Save");
+
+        noteList.getItems().addAll(controller.loadNotes());
+        addBtn.setOnAction(e->{
+            String newNote = "New Note "+(noteList.getItems().size()+1);
+            noteList . getItems().add(newNote);
+            noteContent.clear();
+        });
+        deleteBtn.setOnAction(e->{
+            int selectedIndex = noteList.getSelectionModel().getSelectedIndex();
+            if(selectedIndex>=0){
+                String title = noteList.getItems().get(selectedIndex);
+                 noteList.getItems().remove(selectedIndex);
+                noteContent.clear();
+                new File(title+".txt").delete();
+                    }
+                });
+        saveBtn.setOnAction( e->{
+            controller.saveNote(noteList.getItems());
+        });
+        noteList.getSelectionModel().selectedIndexProperty()
+                .addListener((obs,oldval,newval)->{
+                    if(newval!=null) {
+                        noteContent.setText(
+                                controller.readNote(
+                                        newval.toString()
+                                )
+
+                        );
+                    }
+                });
+        noteContent.textProperty().addListener(
+                (obs,oldval,newVal)->{
+                    String selected = noteList.getSelectionModel().getSelectedItem();
+                    if(selected!=null){
+                        controller.writeNote(selected,newVal);
+                    }
+                }
+        );
+        HBox buttonBar = new HBox(10,addBtn,deleteBtn,saveBtn);
+        buttonBar.setStyle("-fx-padding:10;-fx-alignment:centre;");
+
+        SplitPane sp = new SplitPane(noteList,noteContent);
+        sp.setDividerPositions(0.3);
+
+        VBox vb = new VBox(sp,buttonBar);
+        Scene scene = new Scene(vb,600,400);
+        stage.setScene(scene);
+        stage.show();
+    }
+
+    public static void main(String[] args ) {
+        launch();
+    }
+}
+
+
+
+
+Controller.java
+--------------------------------------------------------
+package com.example.noteapp2;
+
+import java.io.*;
+import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.List;
+
+public class Controller {
+    private final File noteListFile = new File("notes.txt");
+
+    public List<String> loadNotes (){
+        List<String> notes = new ArrayList<>();
+        if(noteListFile.exists()){
+            try{
+                BufferedReader br = new BufferedReader(new FileReader(noteListFile));
+                String line;
+                while((line = br.readLine())!=null){
+                    notes.add(line.trim());
+                }
+                return notes;
+            }catch (Exception e){
+                System.out.printf(e.getMessage());
+            }
+        }
+        return notes;
+    }
+
+    public String readNote(String title){
+        File noteFile = new File(title+".txt");
+        if(!noteFile.exists()){
+            try{
+              return new String(Files.readAllBytes(noteFile.toPath())) ;
+            } catch (Exception e) {
+                System.out.println(e.getMessage());
+                return "";
+            }
+        }
+        return "";
+
+    }
+
+    public void saveNote(List<String> notes){
+        try{
+            PrintWriter pw = new PrintWriter(new FileWriter(noteListFile));
+            for(String note : notes){
+                pw.println(note);
+            }
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
+    public void writeNote(String title,String content){
+        File noteFile = new File (title+"txt");
+        try{
+            PrintWriter pw = new PrintWriter(new FileWriter(noteFile));
+            pw.write(content);
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
+    }
+}
+
